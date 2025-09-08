@@ -1,6 +1,12 @@
-// IMPORTANT: Set this to your backend public URL on Render (or localhost during dev)
-// Example: 'https://esp32web-7t94.onrender.com'
-const API_BASE = 'https://esp32-kmitl-fight-webapp.onrender.com';
-// Export for script.js
-window.__CONFIG__ = { API_BASE };
-document.getElementById('apiBase').textContent = API_BASE;
+/* Config (อย่าใช้ const API_BASE ซ้ำใน global) */
+(function () {
+  // ใส่ URL backend ของคุณ
+  var cfg = { API_BASE: 'https://esp32-kmitl-fight-webapp.onrender.com' };
+
+  // เก็บไว้ที่ window.__CONFIG__ เพื่อให้ไฟล์อื่นอ่าน
+  window.__CONFIG__ = cfg;
+
+  // โชว์ URL บนหน้า
+  var el = document.getElementById('apiBase');
+  if (el) el.textContent = cfg.API_BASE;
+})();
