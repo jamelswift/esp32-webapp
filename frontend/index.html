@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ESP32 DHT11 • Live Dashboard</title>
+  <meta name="description" content="ESP32 temperature & humidity live dashboard">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌡️</text></svg>">
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; padding: 24px; display: grid; gap: 16px; place-items: center; }
+    .card { width: min(720px, 92vw); padding: 16px 20px; border-radius: 16px; box-shadow: 0 6px 30px rgba(0,0,0,.12); }
+    h1 { margin: 0 0 8px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .metric { flex: 1 1 220px; padding: 12px 16px; border-radius: 12px; background: rgba(127,127,127,.08); }
+    .muted { opacity: .7; }
+    .status { font-weight: 600; }
+    footer { opacity: .7; font-size: 14px; }
+    code { padding: 2px 6px; border-radius: 8px; background: rgba(127,127,127,.12); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ESP32 DHT11 • Live Dashboard</h1>
+    <p class="muted">Pulls from <code id="apiBase"></code></p>
+    <div class="row">
+      <div class="metric">
+        <div class="muted">Temperature (°C)</div>
+        <div id="temp" style="font-size: 40px; font-weight: 700;">—</div>
+      </div>
+      <div class="metric">
+        <div class="muted">Humidity (%)</div>
+        <div id="hum" style="font-size: 40px; font-weight: 700;">—</div>
+      </div>
+      <div class="metric">
+        <div class="muted">Status</div>
+        <div class="status" id="status">Disconnected</div>
+      </div>
+    </div>
+    <p class="muted">Last update: <span id="ts">—</span></p>
+  </div>
+  <footer>© 2025 ESP32 KMITL-FIGHT Demo</footer>
+  <script src="./config.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>
