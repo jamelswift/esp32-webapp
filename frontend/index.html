@@ -6,91 +6,135 @@
   <title>ESP32 DHT11 • Live Dashboard</title>
   <meta name="description" content="ESP32 temperature & humidity live dashboard">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌡️</text></svg>">
-
-  <!-- เพิ่ม Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    :root { 
-      color-scheme: light dark; 
-      font-family: 'Inter', system-ui, sans-serif; 
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            'slate': {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              400: '#94a3b8',
+              500: '#64748b',
+              600: '#475569',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
     }
-    body { 
-      margin: 0; 
-      padding: 24px; 
-      display: grid; 
-      gap: 16px; 
-      place-items: center; 
-      background: #f9fafb; 
-    }
-    .card { 
-      width: min(720px, 92vw); 
-      padding: 20px 24px; 
-      border-radius: 16px; 
-      box-shadow: 0 6px 30px rgba(0,0,0,.12); 
-      background: white; 
-    }
-    h1 { 
-      margin: 0 0 12px; 
-      font-weight: 700; 
-    }
-    .row { 
-      display: flex; 
-      gap: 16px; 
-      flex-wrap: wrap; 
-    }
-    .metric { 
-      flex: 1 1 220px; 
-      padding: 12px 16px; 
-      border-radius: 12px; 
-      background: rgba(127,127,127,.08); 
-    }
-    .muted { 
-      opacity: .7; 
-      font-style: italic; /* ทำให้เอน */
-      font-weight: 400;
-    }
-    .status { 
-      font-weight: 600; 
-    }
-    footer { 
-      opacity: .7; 
-      font-size: 14px; 
-      font-style: italic; /* ทำให้ footer เอน */
-    }
-    code { 
-      padding: 2px 6px; 
-      border-radius: 8px; 
-      background: rgba(127,127,127,.12); 
-      font-family: "Fira Code", monospace; 
-      font-style: normal; 
-    }
-  </style>
+  </script>
 </head>
-<body>
-  <div class="card">
-    <h1>ESP32 DHT11 • Live Dashboard</h1>
-    <p class="muted">Pulls from <code id="apiBase"></code></p>
-    <div class="row">
-      <div class="metric">
-        <div class="muted">Temperature (°C)</div>
-        <div id="temp" style="font-size: 40px; font-weight: 700;">—</div>
+
+<body class="min-h-screen bg-slate-50 font-sans antialiased">
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    
+    <!-- Header -->
+    <div class="mb-8 text-center">
+      <h1 class="text-3xl font-bold text-slate-900 mb-2">ESP32 DHT11 Dashboard</h1>
+      <p class="text-slate-500 text-sm">
+        Real-time monitoring from 
+        <code id="apiBase" class="px-2 py-1 bg-slate-100 rounded text-xs font-mono text-slate-700"></code>
+      </p>
+    </div>
+
+    <!-- Main Dashboard Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+      
+      <!-- Status Bar -->
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div id="statusDot" class="w-3 h-3 rounded-full bg-red-400"></div>
+            <span id="status" class="text-sm font-medium text-slate-700">Disconnected</span>
+          </div>
+          <div class="text-xs text-slate-500">
+            Last update: <span id="ts" class="font-mono">—</span>
+          </div>
+        </div>
       </div>
-      <div class="metric">
-        <div class="muted">Humidity (%)</div>
-        <div id="hum" style="font-size: 40px; font-weight: 700;">—</div>
-      </div>
-      <div class="metric">
-        <div class="muted">Status</div>
-        <div class="status" id="status">Disconnected</div>
+
+      <!-- Metrics Grid -->
+      <div class="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+        
+        <!-- Temperature -->
+        <div class="p-8 text-center">
+          <div class="mb-3">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-orange-100 mb-4">
+              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <h3 class="text-sm font-medium text-slate-600 uppercase tracking-wider">Temperature</h3>
+          </div>
+          <div class="flex items-baseline justify-center space-x-1">
+            <span id="temp" class="text-5xl font-bold text-slate-900">—</span>
+            <span class="text-xl text-slate-500 font-medium">°C</span>
+          </div>
+        </div>
+
+        <!-- Humidity -->
+        <div class="p-8 text-center">
+          <div class="mb-3">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-blue-100 mb-4">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.002 4.002 0 003 15z"/>
+              </svg>
+            </div>
+            <h3 class="text-sm font-medium text-slate-600 uppercase tracking-wider">Humidity</h3>
+          </div>
+          <div class="flex items-baseline justify-center space-x-1">
+            <span id="hum" class="text-5xl font-bold text-slate-900">—</span>
+            <span class="text-xl text-slate-500 font-medium">%</span>
+          </div>
+        </div>
       </div>
     </div>
-    <p class="muted">Last update: <span id="ts">—</span></p>
-  </div>
-  <footer>© 2025 ESP32 KMITL-FIGHT Demo</footer>
 
-  <!-- สำคัญ: โหลด config.js ก่อน script.js -->
+    <!-- Footer -->
+    <div class="text-center">
+      <p class="text-xs text-slate-400 font-medium">
+        © 2025 ESP32 KMITL-FIGHT Demo
+      </p>
+    </div>
+  </div>
+
+  <!-- Scripts -->
   <script src="./config.js"></script>
+  <script>
+    // Enhanced script with status indicator
+    let statusDot = document.getElementById('statusDot');
+    let statusText = document.getElementById('status');
+    
+    function updateStatus(connected) {
+      if (connected) {
+        statusDot.className = 'w-3 h-3 rounded-full bg-green-400';
+        statusText.textContent = 'Connected';
+        statusText.className = 'text-sm font-medium text-green-700';
+      } else {
+        statusDot.className = 'w-3 h-3 rounded-full bg-red-400';
+        statusText.textContent = 'Disconnected';
+        statusText.className = 'text-sm font-medium text-red-700';
+      }
+    }
+
+    // Your original script.js functionality goes here
+    // Just add updateStatus(true) when connected and updateStatus(false) when disconnected
+  </script>
   <script src="./script.js"></script>
 </body>
 </html>
