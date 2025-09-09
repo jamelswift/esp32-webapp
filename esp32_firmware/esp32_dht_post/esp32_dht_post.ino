@@ -1,98 +1,118 @@
-// ESP32 DHT11 -> POST JSON to backend
-// Board: ESP32 Dev Module
-// Libraries (install via Library Manager):
-//  - DHT sensor library by Adafruit
-//  - Adafruit Unified Sensor
-//  - (built-in) WiFi, HTTPClient
+/******************************************************
+ * ESP32 → DHT11/22 → POST JSON ไปยัง Render Backend
+ * - อ่านทุก POST_INTERVAL_MS มิลลิวินาที
+ * - ใช้ HTTPS (WiFiClientSecure + setInsecure สำหรับทดสอบ)
+ * - ถ้าใช้ DHT22 ให้เปลี่ยน DHTTYPE = DHT22
+ ******************************************************/
 
+#include <Adafruit_Sensor.h>   // จาก Adafruit Unified Sensor
+#include <DHT.h>               // จาก DHT sensor library (Adafruit)
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
 
-// ======== EDIT WiFi & API ========
+// ---------- ตั้งค่า Wi-Fi & Backend ----------
 const char* WIFI_SSID = "Getzy";
 const char* WIFI_PASS = "Wipatsasicha7";
+const char* API_URL   = "https://esp32-webapp-backend.onrender.com/api/readings";
 
-// Backend API endpoint (POST)
-const char* API_URL   = "https://esp32-webapp-backend.onrender.com/api/readings"; 
-// =================================
-
-#define DHTPIN 4      // Pin connected to DHT11 data
-#define DHTTYPE DHT11 // or DHT22 if your board uses DHT22
+// ---------- ตั้งค่า DHT ----------
+#define DHTPIN   4          // ขา DATA ของ DHT
+#define DHTTYPE  DHT11      // ถ้าใช้ DHT22 ให้เปลี่ยนเป็น DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-unsigned long lastPost = 0;
-const unsigned long POST_INTERVAL_MS = 5000; // 5 seconds
+// ---------- ตั้งค่าอื่น ๆ ----------
+const uint32_t POST_INTERVAL_MS = 5000;  // ส่งทุก 5 วินาที
+const char* DEVICE_ID = "esp32";         // ชื่ออุปกรณ์
+#ifndef LED_BUILTIN
+#define LED_BUILTIN 2                    // กันเหนียวถ้า core ไม่ประกาศ
+#endif
+const int LED_OK = LED_BUILTIN;
 
+// ---------- ฟังก์ชันเชื่อม Wi-Fi ----------
 void connectWiFi() {
+  Serial.print("Connecting WiFi: "); Serial.println(WIFI_SSID);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.print("Connecting WiFi");
-  int tries = 0;
+  uint32_t t0 = millis();
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-    if (++tries > 60) break; // ~30s timeout
+    delay(300); Serial.print(".");
+    if (millis() - t0 > 20000) {
+      Serial.println("\nWiFi connect timeout, restarting...");
+      ESP.restart();
+    }
   }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("WiFi connected, IP: ");
-    Serial.println(WiFi.localIP());
-  } else {
-    Serial.println("WiFi connect failed");
-  }
+  Serial.print("\nWiFi connected, IP: "); Serial.println(WiFi.localIP());
 }
 
+// ---------- ฟังก์ชันส่งค่าไป Backend ----------
+bool postReading(float t, float h) {
+  WiFiClientSecure client;
+  client.setInsecure();                  // โหมดทดสอบ (TLS ไม่ตรวจใบรับรอง)
+  HTTPClient http;
+
+  if (!http.begin(client, API_URL)) {
+    Serial.println("HTTP begin failed");
+    return false;
+  }
+
+  http.addHeader("Content-Type", "application/json");
+  // http.addHeader("x-key", "YOUR_INGEST_KEY"); // ถ้าตั้ง key ไว้ที่ backend
+
+  // สร้าง JSON payload
+  String payload = "{";
+  payload += "\"deviceId\":\"" + String(DEVICE_ID) + "\",";
+  payload += "\"temperature\":" + String(t, 1) + ",";
+  payload += "\"humidity\":" + String(h, 1);
+  payload += "}";
+
+  int code = http.POST(payload);
+  Serial.print("POST "); Serial.print(API_URL); Serial.print(" -> ");
+  Serial.println(code);
+
+  if (code > 0) {
+    Serial.print("Response: "); Serial.println(http.getString());
+  } else {
+    Serial.print("Error: "); Serial.println(http.errorToString(code));
+  }
+  http.end();
+
+  if (code == HTTP_CODE_OK || code == HTTP_CODE_CREATED) {
+    digitalWrite(LED_OK, HIGH); delay(60); digitalWrite(LED_OK, LOW);
+    return true;
+  }
+  return false;
+}
+
+// ---------- setup / loop ----------
 void setup() {
+  pinMode(LED_OK, OUTPUT);
+  digitalWrite(LED_OK, LOW);
+
   Serial.begin(115200);
   delay(1000);
-  dht.begin();
+  Serial.println("\nESP32 DHT → HTTPS POST demo");
+
+  dht.begin();       // ★ ใช้ของ Adafruit ต้องเรียก begin()
   connectWiFi();
 }
 
 void loop() {
-  // Reconnect WiFi if needed
-  if (WiFi.status() != WL_CONNECTED) {
-    connectWiFi();
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println("DHT read failed (NaN). Retrying...");
+    delay(2000);
+    return;
   }
 
-  unsigned long now = millis();
-  if (now - lastPost >= POST_INTERVAL_MS) {
-    lastPost = now;
+  Serial.print("Temp="); Serial.print(t, 1); Serial.print("C  ");
+  Serial.print("Hum=");  Serial.print(h, 1); Serial.println("%");
 
-    float h = dht.readHumidity();
-    float t = dht.readTemperature(); // Celsius
-    if (isnan(h) || isnan(t)) {
-      Serial.println("Failed to read from DHT sensor!");
-      return;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-      HTTPClient http;
-      http.begin(API_URL);
-      http.addHeader("Content-Type", "application/json");
-
-      // Build JSON correctly (escape quotes)
-      String payload = String("{\"deviceId\":\"esp32\",\"temperature\":") + String(t, 1)
-                     + String(",\"humidity\":") + String(h, 1)
-                     + String(",\"ts\":") + String((unsigned long)(millis() / 1000))
-                     + String("}");
-
-      int httpCode = http.POST(payload);
-      Serial.printf("POST %s -> %d\n", API_URL, httpCode);
-      if (httpCode > 0) {
-        String resp = http.getString();
-        Serial.println(resp);
-      } else {
-        Serial.printf("POST failed: %s\n", http.errorToString(httpCode).c_str());
-      }
-      http.end();
-
-      Serial.print("Payload: ");
-      Serial.println(payload);
-    } else {
-      Serial.println("WiFi not connected; skipping POST");
-    }
+  if (!postReading(t, h)) {
+    Serial.println("POST failed. Will retry next cycle.");
   }
+
+  delay(POST_INTERVAL_MS);
 }
