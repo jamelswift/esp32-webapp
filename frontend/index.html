@@ -116,25 +116,58 @@
   <!-- Scripts -->
   <script src="./config.js"></script>
   <script>
-    // Enhanced script with status indicator
-    let statusDot = document.getElementById('statusDot');
-    let statusText = document.getElementById('status');
-    
-    function updateStatus(connected) {
-      if (connected) {
-        statusDot.className = 'w-3 h-3 rounded-full bg-green-400';
-        statusText.textContent = 'Connected';
-        statusText.className = 'text-sm font-medium text-green-700';
-      } else {
-        statusDot.className = 'w-3 h-3 rounded-full bg-red-400';
-        statusText.textContent = 'Disconnected';
-        statusText.className = 'text-sm font-medium text-red-700';
+    /* App logic with enhanced status indicators */
+    (function () {
+      var cfg = (window.__CONFIG__ || {});
+      var API_BASE = cfg.API_BASE;
+      
+      // Display API base in the UI
+      document.getElementById('apiBase').textContent = API_BASE || 'Not configured';
+      
+      // Status indicator elements
+      let statusDot = document.getElementById('statusDot');
+      let statusText = document.getElementById('status');
+      
+      function updateStatus(connected) {
+        if (connected) {
+          statusDot.className = 'w-3 h-3 rounded-full bg-green-400 animate-pulse';
+          statusText.textContent = 'Connected';
+          statusText.className = 'text-sm font-medium text-green-700';
+        } else {
+          statusDot.className = 'w-3 h-3 rounded-full bg-red-400';
+          statusText.textContent = 'Disconnected';
+          statusText.className = 'text-sm font-medium text-red-700';
+        }
       }
-    }
 
-    // Your original script.js functionality goes here
-    // Just add updateStatus(true) when connected and updateStatus(false) when disconnected
+      async function fetchLatest() {
+        try {
+          // Fix double slash issue by ensuring clean URL concatenation
+          const url = API_BASE.replace(/\/$/, '') + '/api/readings/latest';
+          
+          const res = await fetch(url, {
+            cache: 'no-store'
+          });
+          
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          const data = await res.json();
+          document.getElementById('temp').textContent = (data.temperature ?? '—');
+          document.getElementById('hum').textContent = (data.humidity ?? '—');
+          document.getElementById('ts').textContent = data.ts ? new Date(data.ts).toLocaleString() : '—';
+          
+          updateStatus(true);
+        } catch (e) {
+          console.error('Failed to fetch data:', e);
+          updateStatus(false);
+        }
+      }
+
+      // Initialize
+      updateStatus(false);
+      fetchLatest();
+      setInterval(fetchLatest, 5000);
+    })();
   </script>
-  <script src="./script.js"></script>
 </body>
 </html>
