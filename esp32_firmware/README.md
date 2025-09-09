@@ -12,9 +12,9 @@
 ## Configure
 Edit in sketch:
 ```cpp
-const char* WIFI_SSID = "...";
-const char* WIFI_PASS = "...";
-const char* API_URL   = "https://<your-backend>/api/readings";
+const char* WIFI_SSID = "Getzy";
+const char* WIFI_PASS = "Wipatsasicha7";
+const char* API_URL   = "https://esp32-webapp-frontend.onrender.com/api/reading";
 ```
 
 ## Flash

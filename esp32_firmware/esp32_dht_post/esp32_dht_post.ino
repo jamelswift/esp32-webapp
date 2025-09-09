@@ -11,11 +11,11 @@
 #include <DHT.h>
 
 // ======== EDIT WiFi & API ========
-const char* WIFI_SSID = "YOUR_WIFI_SSID";
-const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID = "Getzy";
+const char* WIFI_PASS = "Wipatsasicha7";
 
 // Backend API endpoint (POST)
-const char* API_URL   = "https://esp32web-7t94.onrender.com/api/readings"; // change to your backend
+const char* API_URL   = "https://esp32-webapp-backend.onrender.com/api/readings"; 
 // =================================
 
 #define DHTPIN 4      // Pin connected to DHT11 data
@@ -73,10 +73,11 @@ void loop() {
       http.begin(API_URL);
       http.addHeader("Content-Type", "application/json");
 
-      // Build JSON
-      String payload = String("{"deviceId":"esp32","temperature":") + String(t, 1)
-                     + String(","humidity":") + String(h, 1)
-                     + String(","ts":"") + String(((unsigned long) (millis()/1000))) + String(""}");
+      // Build JSON correctly (escape quotes)
+      String payload = String("{\"deviceId\":\"esp32\",\"temperature\":") + String(t, 1)
+                     + String(",\"humidity\":") + String(h, 1)
+                     + String(",\"ts\":") + String((unsigned long)(millis() / 1000))
+                     + String("}");
 
       int httpCode = http.POST(payload);
       Serial.printf("POST %s -> %d\n", API_URL, httpCode);
@@ -87,6 +88,9 @@ void loop() {
         Serial.printf("POST failed: %s\n", http.errorToString(httpCode).c_str());
       }
       http.end();
+
+      Serial.print("Payload: ");
+      Serial.println(payload);
     } else {
       Serial.println("WiFi not connected; skipping POST");
     }
